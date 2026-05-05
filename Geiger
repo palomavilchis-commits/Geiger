@@ -1,0 +1,30 @@
+import serial
+import time
+import csv
+
+# Initialize CSV with headers
+with open('TempData.csv', mode='a', newline='') as sensor_file:
+    sensor_writer = csv.writer(sensor_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+    sensor_writer.writerow(["temp", "Tiempo"]) #nombre de columnas
+
+# Serial settings
+com = "/dev/cu.usbmodem14101"
+baud = 9600
+x = serial.Serial(com, baud, timeout=0.1)
+
+# Main loop
+while x.isOpen():
+    data = x.readline().decode('utf-8').strip()
+
+    if data != '':  # Fixes the SyntaxWarning
+        try:
+            # Extract the numeric part (assumes 'X: -0.04' format)
+            value = float(data.split(':')[1].strip()) if ':' in data else float(data)
+
+            print(value)
+            with open('SensorData.csv', mode='a', newline='') as sensor_file:
+                sensor_writer = csv.writer(sensor_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+                sensor_writer.writerow([value, time.strftime("%S")])
+
+        except (ValueError, IndexError) as e:
+            print(f"Could not parse value: {data} ({e})")
