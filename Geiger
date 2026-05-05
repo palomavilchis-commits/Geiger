@@ -2,29 +2,32 @@ import serial
 import time
 import csv
 
-# Initialize CSV with headers
-with open('TempData.csv', mode='a', newline='') as sensor_file:
+# Crea el archivo
+with open('Geiger_SensorData.csv', mode='a', newline='') as sensor_file:
     sensor_writer = csv.writer(sensor_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-    sensor_writer.writerow(["temp", "Tiempo"]) #nombre de columnas
+    sensor_writer.writerow(["Counts", "CPM", "Tiempo"])  # nombre de columnas
 
-# Serial settings
-com = "/dev/cu.usbmodem14101"
+
+com = "/dev/cu.usbmodem14101 o COM4"
 baud = 9600
-x = serial.Serial(com, baud, timeout=0.1)
+LOG_PERIOD = 60  # Debe coincidir con LOG_PERIOD del Arduino (en segundos)
 
-# Main loop
+x = serial.Serial(com, baud, timeout=0.1)
 while x.isOpen():
     data = x.readline().decode('utf-8').strip()
-
-    if data != '':  # Fixes the SyntaxWarning
+    if data != '':
         try:
-            # Extract the numeric part (assumes 'X: -0.04' format)
-            value = float(data.split(':')[1].strip()) if ':' in data else float(data)
 
-            print(value)
-            with open('SensorData.csv', mode='a', newline='') as sensor_file:
-                sensor_writer = csv.writer(sensor_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-                sensor_writer.writerow([value, time.strftime("%S")])
+            if data.isdigit():
+                counts = int(data)
+                cpm = round((counts / LOG_PERIOD) * 60, 2)
+
+                print(f"Counts: {counts}, CPM: {cpm}")
+
+        
+                with open('Geiger_SensorData.csv', mode='a', newline='') as sensor_file:
+                    sensor_writer = csv.writer(sensor_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+                    sensor_writer.writerow([counts, cpm, time.strftime("%H:%M:%S")])  # hora:minuto:segundo
 
         except (ValueError, IndexError) as e:
-            print(f"Could not parse value: {data} ({e})")
+            print(f"Could not parse Geiger data: {data} ({e})")
